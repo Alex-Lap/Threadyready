@@ -10,6 +10,8 @@
 #define KEEP 16 // only the first 16 bytes of a hash are kept
 #define NUM_WORKERS 8
 
+
+
 struct cracked_hash {
 	char hash[2*KEEP+1];
 	char *password, *alg;
@@ -25,7 +27,7 @@ typedef struct {
     pthread_mutex_t *mutex;
 } password_thread_arg_t;
 
-static const char hex_chars[] = "0123456789abcdef";
+
 
 typedef unsigned char * (*hashing)(unsigned char *, unsigned int);
 
@@ -40,7 +42,7 @@ int compare_hashes(char *a, char *b) {
 	return 1;
 }
 
-
+static const char hex_chars[] = "0123456789abcdef";
 
 void *crack_thread_func(void *arg) {
     password_thread_arg_t *targ = (password_thread_arg_t *)arg;
@@ -50,13 +52,18 @@ void *crack_thread_func(void *arg) {
         char *password = targ->passwords[p];
 		char cracked = 0;
         for (int i = 0; i < n_algs; i++) {
-            unsigned char *hash = fn[i]((unsigned char *)password, strlen(password));
+            size_t len = strnlen(password, 32);
+			unsigned char *upassword = (unsigned char *)password;
+			unsigned char *hash = fn[i](upassword, len);
 
-            for (int j = 0; j < KEEP; j++)
-                unsigned char byte = hash[j];
-		hex_hash[2 * j]     = hex_chars[byte >> 4];
-		hex_hash[2 * j + 1] = hex_chars[byte & 0x0F];
-            hex_hash[2 * KEEP] = '\0';
+            
+			for (int j = 0; j < KEEP; j++) {
+				unsigned char byte = hash[j];
+				hex_hash[2 * j]     = hex_chars[byte >> 4];
+				hex_hash[2 * j + 1] = hex_chars[byte & 0x0F];
+			}
+			hex_hash[2 * KEEP] = '\0';
+
 
             for (int j = 0; j < targ->n_hashed; j++) {
 				if (compare_hashes(hex_hash, targ->cracked_hashes[j].hash)) {
@@ -68,6 +75,7 @@ void *crack_thread_func(void *arg) {
 					break;
 				}
             }
+			
         }
     }
 
@@ -103,7 +111,6 @@ void crack_hashed_passwords(char *password_list, char *hashed_list, char *output
 		fscanf(fp, "%s", cracked_hashes[i].hash);
 		cracked_hashes[i].password = NULL;
 		cracked_hashes[i].alg = NULL;
-		pthread_mutex_init(&cracked_hashes[i].lock, NULL);
 	}
 	fclose(fp);
 
@@ -116,7 +123,6 @@ void crack_hashed_passwords(char *password_list, char *hashed_list, char *output
 	passwords = malloc(cap * sizeof(char*));
 	assert(passwords);
 
-	fp = fopen(password_list, "r");
 	assert(fp);
 
 	char buffer[256];
