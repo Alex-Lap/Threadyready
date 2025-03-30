@@ -8,7 +8,7 @@
 #include "hash_functions.h"
 
 #define KEEP 16 // only the first 16 bytes of a hash are kept
-#define NUM_WORKERS 3
+#define NUM_WORKERS 8
 
 struct cracked_hash {
 	char hash[2*KEEP+1];
