@@ -25,7 +25,7 @@ typedef struct {
     pthread_mutex_t *mutex;
 } password_thread_arg_t;
 
-
+static const char hex_chars[] = "0123456789abcdef";
 
 typedef unsigned char * (*hashing)(unsigned char *, unsigned int);
 
@@ -53,7 +53,9 @@ void *crack_thread_func(void *arg) {
             unsigned char *hash = fn[i]((unsigned char *)password, strlen(password));
 
             for (int j = 0; j < KEEP; j++)
-                sprintf(&hex_hash[2 * j], "%02x", hash[j]);
+                unsigned char byte = hash[j];
+		hex_hash[2 * j]     = hex_chars[byte >> 4];
+		hex_hash[2 * j + 1] = hex_chars[byte & 0x0F];
             hex_hash[2 * KEEP] = '\0';
 
             for (int j = 0; j < targ->n_hashed; j++) {
